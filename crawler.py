@@ -32,6 +32,7 @@ class PttWebCrawler(object):
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument('-i', metavar=('START_INDEX', 'END_INDEX'), type=int, nargs=2, help="Start and end index")
         group.add_argument('-a', metavar='ARTICLE_ID', help="Article ID")
+        parser.add_argument('-f', '--filename', metavar='OUTPUT FILENAME', help="Output file name")
         parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
         if cmdline:
@@ -41,13 +42,12 @@ class PttWebCrawler(object):
         board = args.b
         PTT_URL = 'https://www.ptt.cc'
         if args.i:
-            start = args.i[0]
-            if args.i[1] == -1:
-                end = self.getLastPage(board)
-            else:
-                end = args.i[1]
+            # -1 means last page
+            lastpage = self.getLastPage(board)
+            start = args.i[0] if args.i[0] > 0 else lastpage + args.i[0] + 1
+            end = args.i[1] if args.i[1] > 0 else lastpage + args.i[1] + 1
             index = start
-            filename = board + '-' + str(start) + '-' + str(end) + '.json'
+            filename = args.filename if args.filename else board + '-' + str(start) + '-' + str(end) + '.json'
             self.store(filename, u'{"articles": [', 'w')
             for i in range(end-start+1):
                 index = start + i
@@ -187,7 +187,7 @@ class PttWebCrawler(object):
             f.write(data)
 
     @staticmethod
-    def get():
+    def get(filename, mode='r'):
         with codecs.open(filename, mode, encoding='utf-8') as f:
             j = json.load(f)
             print(f)
