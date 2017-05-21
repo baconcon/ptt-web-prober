@@ -22,32 +22,15 @@ if sys.version_info[0] < 3:
 
 class PttWebCrawler(object):
     """docstring for PttWebCrawler"""
-    def __init__(self, cmdline=None):
-        parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description='''
-            A crawler for the web version of PTT, the largest online community in Taiwan.
-            Input: board name and page indices (or articla ID)
-            Output: BOARD_NAME-START_INDEX-END_INDEX.json (or BOARD_NAME-ID.json)
-        ''')
-        parser.add_argument('-b', metavar='BOARD_NAME', help='Board name', required=True)
-        group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument('-i', metavar=('START_INDEX', 'END_INDEX'), type=int, nargs=2, help="Start and end index")
-        group.add_argument('-a', metavar='ARTICLE_ID', help="Article ID")
-        parser.add_argument('-f', '--filename', metavar='OUTPUT FILENAME', help="Output file name")
-        parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
-
-        if cmdline:
-            args = parser.parse_args(cmdline)
-        else:
-            args = parser.parse_args()
-        board = args.b
+    def __init__(self, board, filename, start_end, article_id):
+        self.data = ''
         PTT_URL = 'https://www.ptt.cc'
-        if args.i:
+        if start_end:
             # -1 means last page
             lastpage = self.getLastPage(board)
-            start = args.i[0] if args.i[0] > 0 else lastpage + args.i[0] + 1
-            end = args.i[1] if args.i[1] > 0 else lastpage + args.i[1] + 1
+            start = start_end[0] if start_end[0] > 0 else lastpage + start_end[0] + 1
+            end = start_end[1] if start_end[1] > 0 else lastpage + start_end[1] + 1
             index = start
-            filename = args.filename if args.filename else board + '-' + str(start) + '-' + str(end) + '.json'
             self.store(filename, u'{"articles": [', 'w')
             for i in range(end-start+1):
                 index = start + i
@@ -75,10 +58,8 @@ class PttWebCrawler(object):
                         pass
                 time.sleep(0.1)
             self.store(filename, u']}', 'a')
-        else:  # args.a
-            article_id = args.a
+        elif article_id:  # args.a
             link = PTT_URL + '/bbs/' + board + '/' + article_id + '.html'
-            filename = board + '-' + article_id + '.json'
             self.store(filename, self.parse(link, article_id, board), 'w')
 
     @staticmethod
@@ -181,8 +162,13 @@ class PttWebCrawler(object):
             return 1
         return int(first_page.group(1)) + 1
 
-    @staticmethod
-    def store(filename, data, mode):
+    def store(self, filename, data, mode):
+        if not filename:
+            if mode == 'w':
+                self.data = data
+            elif mode == 'a':
+                self.data = self.data + data
+            return
         with codecs.open(filename, mode, encoding='utf-8') as f:
             f.write(data)
 
@@ -190,7 +176,7 @@ class PttWebCrawler(object):
     def get(filename, mode='r'):
         with codecs.open(filename, mode, encoding='utf-8') as f:
             j = json.load(f)
-            print(f)
+            return j
 
 if __name__ == '__main__':
     c = PttWebCrawler()
