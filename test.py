@@ -28,9 +28,13 @@ filename = args.filename if args.filename else None
 start_end = (args.i[0], args.i[1]) if args.i else None
 article_id = args.a if args.a else None
 
-c = PttWebCrawler(board=board, filename=filename, start_end=start_end, article_id=article_id)
+c = PttWebCrawler(board=board, filename=filename)
 
-print c.data
+c.getArticles(start_end=start_end, article_id=article_id)
+
+result = c.get()
+print result
+print type(result)
 
 #data = c.get(OUTPUTFILE)
 #pp = pprint.PrettyPrinter(indent=4)

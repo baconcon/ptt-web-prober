@@ -22,21 +22,27 @@ if sys.version_info[0] < 3:
 
 class PttWebCrawler(object):
     """docstring for PttWebCrawler"""
-    def __init__(self, board, filename, start_end, article_id):
+    def __init__(self, board, filename):
+        self.board = board
+        self.filename = filename
+        self.start_end = ''
+        self.article_id = ''
+        self.data = ''
+    def getArticles(self, start_end, article_id):
         self.data = ''
         PTT_URL = 'https://www.ptt.cc'
         if start_end:
             # -1 means last page
-            lastpage = self.getLastPage(board)
+            lastpage = self.getLastPage()
             start = start_end[0] if start_end[0] > 0 else lastpage + start_end[0] + 1
             end = start_end[1] if start_end[1] > 0 else lastpage + start_end[1] + 1
             index = start
-            self.store(filename, u'{"articles": [', 'w')
+            self.store( u'{"articles": [', 'w')
             for i in range(end-start+1):
                 index = start + i
                 print('Processing index:', str(index))
                 resp = requests.get(
-                    url=PTT_URL + '/bbs/' + board + '/index' + str(index) + '.html',
+                    url=PTT_URL + '/bbs/' + self.board + '/index' + str(index) + '.html',
                     cookies={'over18': '1'}, verify=VERIFY
                 )
                 if resp.status_code != 200:
@@ -51,16 +57,16 @@ class PttWebCrawler(object):
                         link = PTT_URL + href
                         article_id = re.sub('\.html', '', href.split('/')[-1])
                         if div == divs[-1] and i == end-start:  # last div of last page
-                            self.store(filename, self.parse(link, article_id, board), 'a')
+                            self.store(self.parse(link, article_id, self.board), 'a')
                         else:
-                            self.store(filename, self.parse(link, article_id, board) + ',\n', 'a')
+                            self.store(self.parse(link, article_id, self.board) + ',\n', 'a')
                     except:
                         pass
                 time.sleep(0.1)
-            self.store(filename, u']}', 'a')
+            self.store(u']}', 'a')
         elif article_id:  # args.a
-            link = PTT_URL + '/bbs/' + board + '/' + article_id + '.html'
-            self.store(filename, self.parse(link, article_id, board), 'w')
+            link = PTT_URL + '/bbs/' + self.board + '/' + article_id + '.html'
+            self.store(self.parse(link, article_id, self.board), 'w')
 
     @staticmethod
     def parse(link, article_id, board):
@@ -151,32 +157,32 @@ class PttWebCrawler(object):
         # print 'original:', d
         return json.dumps(data, sort_keys=True, ensure_ascii=False)
 
-    @staticmethod
-    def getLastPage(board):
+    def getLastPage(self):
         content = requests.get(
-            url= 'https://www.ptt.cc/bbs/' + board + '/index.html',
+            url= 'https://www.ptt.cc/bbs/' + self.board + '/index.html',
             cookies={'over18': '1'}
         ).content.decode('utf-8')
-        first_page = re.search(r'href="/bbs/' + board + '/index(\d+).html">&lsaquo;', content)
+        first_page = re.search(r'href="/bbs/' + self.board + '/index(\d+).html">&lsaquo;', content)
         if first_page is None:
             return 1
         return int(first_page.group(1)) + 1
 
-    def store(self, filename, data, mode):
-        if not filename:
+    def store(self, data, mode):
+        if not self.filename:
             if mode == 'w':
                 self.data = data
             elif mode == 'a':
                 self.data = self.data + data
             return
-        with codecs.open(filename, mode, encoding='utf-8') as f:
+        with codecs.open(self.filename, mode, encoding='utf-8') as f:
             f.write(data)
 
-    @staticmethod
-    def get(filename, mode='r'):
-        with codecs.open(filename, mode, encoding='utf-8') as f:
-            j = json.load(f)
-            return j
+    def get(self):
+        if self.data:
+            return json.loads(self.data)
+        else:
+            with codecs.open(self.filename, 'r', encoding='utf-8') as f:
+                return json.load(f)
 
 if __name__ == '__main__':
     c = PttWebCrawler()
