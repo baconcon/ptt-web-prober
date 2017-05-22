@@ -22,13 +22,12 @@ if sys.version_info[0] < 3:
 
 class PttWebCrawler(object):
     """docstring for PttWebCrawler"""
-    def __init__(self, board, filename):
+    def __init__(self, board, filename=None, verbose=False):
         self.board = board
         self.filename = filename
-        self.start_end = ''
-        self.article_id = ''
+        self.verbose = verbose
         self.data = ''
-    def getArticles(self, start_end, article_id):
+    def getArticles(self, start_end=None, article_id=''):
         self.data = ''
         PTT_URL = 'https://www.ptt.cc'
         if start_end:
@@ -40,7 +39,8 @@ class PttWebCrawler(object):
             self.store( u'{"articles": [', 'w')
             for i in range(end-start+1):
                 index = start + i
-                print('Processing index:', str(index))
+                if self.verbose:
+                    print('Processing index:', str(index))
                 resp = requests.get(
                     url=PTT_URL + '/bbs/' + self.board + '/index' + str(index) + '.html',
                     cookies={'over18': '1'}, verify=VERIFY
@@ -60,7 +60,9 @@ class PttWebCrawler(object):
                             self.store(self.parse(link, article_id, self.board), 'a')
                         else:
                             self.store(self.parse(link, article_id, self.board) + ',\n', 'a')
-                    except:
+                    except Exception as e:
+                        if self.verbose:
+                            print('Error: %s' % str(e))
                         pass
                 time.sleep(0.1)
             self.store(u']}', 'a')
@@ -68,9 +70,9 @@ class PttWebCrawler(object):
             link = PTT_URL + '/bbs/' + self.board + '/' + article_id + '.html'
             self.store(self.parse(link, article_id, self.board), 'w')
 
-    @staticmethod
-    def parse(link, article_id, board):
-        print('Processing article:', article_id)
+    def parse(self, link, article_id, board):
+        if self.verbose:
+            print('Processing article:', article_id)
         resp = requests.get(url=link, cookies={'over18': '1'}, verify=VERIFY)
         if resp.status_code != 200:
             print('invalid url:', resp.url)
@@ -184,5 +186,3 @@ class PttWebCrawler(object):
             with codecs.open(self.filename, 'r', encoding='utf-8') as f:
                 return json.load(f)
 
-if __name__ == '__main__':
-    c = PttWebCrawler()
