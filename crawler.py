@@ -1,4 +1,6 @@
 # vim: set ts=4 sw=4 et: -*- coding: utf-8 -*-
+# this file is retrieved from https://github.com/jwlin/ptt-web-crawler.git
+
 from __future__ import absolute_import
 from __future__ import print_function
 
